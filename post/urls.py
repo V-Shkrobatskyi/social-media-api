@@ -1,6 +1,6 @@
 from rest_framework import routers
 
 
-router = routers.DefaultRouter()
+app_name = "post"
 
-app_name = "cinema"
+urlpatterns = []
