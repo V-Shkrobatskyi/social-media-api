@@ -44,7 +44,7 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "debug_toolbar",
     "user",
-    "post",
+    "social_network",
 ]
 
 MIDDLEWARE = [

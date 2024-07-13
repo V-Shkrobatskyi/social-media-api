@@ -20,7 +20,10 @@ from django.urls import path, include
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("api/post/", include("post.urls", namespace="post")),
+    path(
+        "api/social-network/",
+        include("social_network.urls", namespace="social-network"),
+    ),
     path("api/user/", include("user.urls", namespace="user")),
     path("__debug__/", include("debug_toolbar.urls")),
 ]
