@@ -32,10 +32,10 @@ class Profile(models.Model):
     bio = models.TextField(max_length=255, null=True, blank=True)
     phone_number = models.CharField(max_length=12, null=True, blank=True)
     following = models.ManyToManyField(
-        "self", blank=True, symmetrical=False, related_name="following"
+        "self", blank=True, symmetrical=False, related_name="profile_following"
     )
     followers = models.ManyToManyField(
-        "self", blank=True, symmetrical=False, related_name="followers"
+        "self", blank=True, symmetrical=False, related_name="profile_followers"
     )
 
     def __str__(self) -> str:
