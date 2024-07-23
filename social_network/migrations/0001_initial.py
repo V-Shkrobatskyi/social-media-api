@@ -31,7 +31,7 @@ class Migration(migrations.Migration):
                     "image",
                     models.ImageField(
                         null=True,
-                        upload_to=social_network.models.profile_image_file_path,
+                        upload_to=social_network.models.image_file_path,
                     ),
                 ),
                 ("bio", models.TextField(blank=True)),
