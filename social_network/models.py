@@ -11,7 +11,7 @@ def image_file_path(instance, filename):
     extension = os.path.splitext(filename)
     filename = f"{slugify(instance.user)}-{uuid.uuid4()}{extension}"
 
-    return os.path.join(f"uploads/{instance.__class__.__name__}/", filename)
+    return os.path.join(f"uploads/{instance.__class__.__name__.lower()}/", filename)
 
 
 class Profile(models.Model):
