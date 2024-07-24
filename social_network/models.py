@@ -9,7 +9,7 @@ from social_media_api import settings
 
 def image_file_path(instance, filename):
     extension = os.path.splitext(filename)
-    filename = f"{slugify(instance.user)}-{uuid.uuid4()}{extension}"
+    filename = f"{slugify(instance.user.full_name)}-{uuid.uuid4()}{extension}"
 
     return os.path.join(f"uploads/{instance.__class__.__name__.lower()}/", filename)
 
@@ -39,7 +39,7 @@ class Profile(models.Model):
     )
 
     def __str__(self) -> str:
-        return f"{self.first_name} {self.last_name}"
+        return f"{self.user.full_name}"
 
 
 class Post(models.Model):
@@ -90,3 +90,11 @@ class Like(models.Model):
         related_name="likes",
     )
     action = models.CharField(max_length=15, choices=ActionChoices.choices)
+
+    @property
+    def likes_count(self) -> int:
+        return self.objects.fillter(action=ActionChoices.LIKE).count()
+
+    @property
+    def dislikes_count(self) -> int:
+        return self.objects.fillter(action=ActionChoices.DISLIKE).count()
