@@ -9,7 +9,7 @@ from social_media_api import settings
 
 def image_file_path(instance, filename):
     extension = os.path.splitext(filename)
-    filename = f"{slugify(instance.user.full_name)}-{uuid.uuid4()}{extension}"
+    filename = f"{slugify(instance.full_name)}-{uuid.uuid4()}{extension}"
 
     return os.path.join(f"uploads/{instance.__class__.__name__.lower()}/", filename)
 
@@ -38,8 +38,12 @@ class Profile(models.Model):
         "self", blank=True, symmetrical=False, related_name="profile_followers"
     )
 
+    @property
+    def full_name(self) -> str:
+        return f"{self.first_name} {self.last_name}"
+
     def __str__(self) -> str:
-        return f"{self.user.full_name}"
+        return f"{self.full_name}"
 
 
 class Post(models.Model):
