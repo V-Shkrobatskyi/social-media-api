@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from social_network.models import Profile, Comment, Like, Post
 
@@ -8,6 +9,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         model = Profile
         fields = [
             "id",
+            "user",
             "first_name",
             "last_name",
             "image",
@@ -18,6 +20,30 @@ class ProfileSerializer(serializers.ModelSerializer):
             "following",
             "followers",
         ]
+
+    def validate(self, attrs):
+        data = super(ProfileSerializer, self).validate(attrs=attrs)
+
+        user = self.context["request"].user
+        profile_exist = Profile.objects.filter(user=user).first()
+        if profile_exist and self.instance != profile_exist:
+            raise ValidationError({"error": "You already have a profile."})
+
+        return data
+
+    def create(self, validated_data):
+        profile = Profile.objects.create(**validated_data)
+        return profile
+
+    def update(self, instance, validated_data):
+        fields_to_update = ["image", "bio", "phone_number"]
+
+        for field in fields_to_update:
+            value = validated_data.get(field, getattr(instance, field))
+            setattr(instance, field, value)
+
+        instance.save()
+        return instance
 
 
 class ProfileListSerializer(serializers.ModelSerializer):
@@ -73,12 +99,12 @@ class PostSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "text",
-            "created_at",
-            "hashtag",
+            "created",
+            "hashtags",
             "image",
             "comments",
             "likes",
-            "scheduled_time",
+            "dislikes",
         )
 
 
@@ -86,6 +112,7 @@ class LikeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Like
         fields = ("id", "post", "action", "user")
+        read_only_fields = ("id", "user")
 
     def validate(self, attrs):
         data = super(LikeSerializer, self).validate(attrs)
@@ -99,6 +126,8 @@ class LikeSerializer(serializers.ModelSerializer):
             action=action,
         ).exists():
             raise serializers.ValidationError(f"You have already {action} this post.")
+
+        return data
 
     def save(self, *args, **kwargs):
         post = self.validated_data["post"]
