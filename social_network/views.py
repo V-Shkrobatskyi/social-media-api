@@ -1,4 +1,5 @@
 from rest_framework import viewsets, status
+from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 
@@ -30,6 +31,9 @@ class ProfileViewSet(viewsets.ModelViewSet):
         if birth_date:
             queryset = queryset.filter(birth_date=birth_date)
 
+        if self.action == "retrieve":
+            queryset = queryset.prefetch_related()
+
         return queryset.distinct()
 
     def get_serializer_class(self):
@@ -45,6 +49,11 @@ class ProfileViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         serializer.save(user=self.request.user)
 
+    @action(
+        methods=["GET", "POST"],
+        detail=True,
+        url_path="upload-image",
+    )
     def upload_image(self, request, pk=None):
         profile = self.get_object()
         serializer = self.get_serializer(profile, data=request.data)
@@ -52,10 +61,37 @@ class ProfileViewSet(viewsets.ModelViewSet):
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @action(methods=["GET"], detail=True)
+    def follow_or_unfollow(self, request, pk=None):
+        profile = self.get_object()
+
+        if self.request.user.profile == profile:
+            return Response(
+                {"detail": "You cannot follow/unfollow yourself."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if profile in self.request.user.profile.following.all():
+            self.request.user.profile.following.remove(profile)
+            return Response(
+                {"detail": f"Now you are now unfollowing user {profile}."},
+                status=status.HTTP_200_OK,
+            )
+
+        self.request.user.profile.following.add(profile)
+        return Response(
+            {"detail": f"Now you are now following user {profile}."},
+            status=status.HTTP_200_OK,
+        )
+
 
 class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all().select_related("user").prefetch_related("comments")
     serializer_class = PostSerializer
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        serializer.save(user=user)
 
 
 class CommentViewSet(viewsets.ModelViewSet):
