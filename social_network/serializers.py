@@ -5,6 +5,15 @@ from social_network.models import Profile, Comment, Like, Post
 
 
 class ProfileSerializer(serializers.ModelSerializer):
+    following = serializers.SerializerMethodField()
+    followers = serializers.SerializerMethodField()
+
+    def get_following(self, obj):
+        return [following.full_name for following in obj.following.all()]
+
+    def get_followers(self, obj):
+        return [follower.full_name for follower in obj.followers.all()]
+
     class Meta:
         model = Profile
         fields = [
@@ -20,6 +29,7 @@ class ProfileSerializer(serializers.ModelSerializer):
             "following",
             "followers",
         ]
+        read_only_fields = ("id", "user", "following")
 
     def validate(self, attrs):
         data = super(ProfileSerializer, self).validate(attrs=attrs)
@@ -27,7 +37,11 @@ class ProfileSerializer(serializers.ModelSerializer):
         user = self.context["request"].user
         profile_exist = Profile.objects.filter(user=user).first()
         if profile_exist and self.instance != profile_exist:
-            raise ValidationError({"error": "You already have a profile."})
+            raise ValidationError(
+                {
+                    "error": "You already have your own profile. You can change only your profile."
+                }
+            )
 
         return data
 
@@ -36,7 +50,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         return profile
 
     def update(self, instance, validated_data):
-        fields_to_update = ["image", "bio", "phone_number"]
+        fields_to_update = ["last_name", "bio", "phone_number"]
 
         for field in fields_to_update:
             value = validated_data.get(field, getattr(instance, field))
@@ -47,8 +61,8 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 
 class ProfileListSerializer(serializers.ModelSerializer):
-    count_following = serializers.IntegerField(source="following.count")
-    count_followers = serializers.IntegerField(source="followers.count")
+    following_count = serializers.IntegerField(source="following.count")
+    followers_count = serializers.IntegerField(source="followers.count")
 
     class Meta:
         model = Profile
@@ -60,8 +74,8 @@ class ProfileListSerializer(serializers.ModelSerializer):
             "gender",
             "bio",
             "phone_number",
-            "count_following",
-            "count_followers",
+            "following_count",
+            "followers_count",
         )
 
 
@@ -69,6 +83,19 @@ class ProfileImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
         fields = ("id", "image")
+
+    def validate(self, attrs):
+        data = super(ProfileImageSerializer, self).validate(attrs=attrs)
+
+        user = self.context["request"].user
+        profile_user = Profile.objects.filter(user=user).first()
+
+        if profile_user != user:
+            raise ValidationError(
+                {"error": "You can upload image only to your profile."}
+            )
+
+        return data
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -90,6 +117,7 @@ class CommentDetailSerializer(CommentSerializer):
 
 
 class PostSerializer(serializers.ModelSerializer):
+    user = serializers.CharField(read_only=True, source="user.profile.full_name")
     comments = CommentSerializer(many=True, read_only=True)
     likes = serializers.CharField(read_only=True, source="like.likes_count")
     dislikes = serializers.CharField(read_only=True, source="like.dislikes_count")
@@ -98,10 +126,12 @@ class PostSerializer(serializers.ModelSerializer):
         model = Post
         fields = (
             "id",
-            "text",
-            "created",
-            "hashtags",
+            "title",
             "image",
+            "text",
+            "hashtags",
+            "user",
+            "created",
             "comments",
             "likes",
             "dislikes",
