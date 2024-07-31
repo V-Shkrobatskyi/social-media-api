@@ -1,7 +1,6 @@
 import os
 import uuid
 
-from django.contrib.auth import get_user_model
 from django.utils.text import slugify
 from django.db import models
 from social_media_api import settings
@@ -32,10 +31,7 @@ class Profile(models.Model):
     bio = models.TextField(max_length=255, null=True, blank=True)
     phone_number = models.CharField(max_length=12, null=True, blank=True)
     following = models.ManyToManyField(
-        "self", blank=True, symmetrical=False, related_name="profile_following"
-    )
-    followers = models.ManyToManyField(
-        "self", blank=True, symmetrical=False, related_name="profile_followers"
+        "self", blank=True, symmetrical=False, related_name="followers"
     )
 
     @property
