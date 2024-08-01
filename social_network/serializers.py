@@ -101,7 +101,7 @@ class ProfileImageSerializer(serializers.ModelSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
-        fields = ("id", "text", "user", "created")
+        fields = ("id", "text", "created")
 
 
 class CommentCreateSerializer(CommentSerializer):
@@ -113,14 +113,14 @@ class CommentCreateSerializer(CommentSerializer):
 class CommentDetailSerializer(CommentSerializer):
     class Meta:
         model = Comment
-        fields = ("id", "post", "user", "text", "created")
+        fields = ("id", "user", "text", "created")
 
 
 class PostSerializer(serializers.ModelSerializer):
     user = serializers.CharField(read_only=True, source="user.profile.full_name")
-    comments = CommentSerializer(many=True, read_only=True)
-    likes = serializers.CharField(read_only=True, source="like.likes_count")
-    dislikes = serializers.CharField(read_only=True, source="like.dislikes_count")
+    comments = CommentDetailSerializer(many=True, read_only=True)
+    likes_count = serializers.IntegerField()
+    dislikes_count = serializers.IntegerField()
 
     class Meta:
         model = Post
@@ -133,8 +133,28 @@ class PostSerializer(serializers.ModelSerializer):
             "user",
             "created",
             "comments",
-            "likes",
-            "dislikes",
+            "likes_count",
+            "dislikes_count",
+        )
+
+
+class PostListSerializer(serializers.ModelSerializer):
+    likes_count = serializers.IntegerField()
+    dislikes_count = serializers.IntegerField()
+
+    class Meta:
+        model = Post
+        fields = (
+            "id",
+            "title",
+            "image",
+            "text",
+            "hashtags",
+            "user",
+            "created",
+            "comments_count",
+            "likes_count",
+            "dislikes_count",
         )
 
 
