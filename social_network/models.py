@@ -61,6 +61,10 @@ class Post(models.Model):
     class Meta:
         ordering = ["-created"]
 
+    @property
+    def comments_count(self):
+        return self.comments.count()
+
 
 class Comment(models.Model):
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="comments")
