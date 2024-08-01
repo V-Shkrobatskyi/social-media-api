@@ -1,3 +1,4 @@
+from django.db.models import Count, Q
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
@@ -11,6 +12,8 @@ from social_network.serializers import (
     ProfileImageSerializer,
     ProfileListSerializer,
     LikeSerializer,
+    PostListSerializer,
+    CommentCreateSerializer,
 )
 
 
@@ -86,12 +89,63 @@ class ProfileViewSet(viewsets.ModelViewSet):
 
 
 class PostViewSet(viewsets.ModelViewSet):
-    queryset = Post.objects.all().select_related("user").prefetch_related("comments")
+    queryset = (
+        Post.objects.all()
+        .select_related("user")
+        .prefetch_related(
+            "likes",
+            "comments",
+        )
+        .annotate(
+            likes_count=Count("likes", filter=Q(likes__action="like")),
+            dislikes_count=Count("likes", filter=Q(likes__action="dislike")),
+        )
+    ).order_by("-created")
     serializer_class = PostSerializer
+
+    def get_queryset(self):
+        queryset = self.queryset
+
+        if self.action == "list":
+            queryset = self.queryset.filter(
+                Q(user__profile__followers=self.request.user.profile)
+                | Q(user__profile=self.request.user.profile)
+            )
+
+            text = self.request.query_params.get("text")
+            hashtag = self.request.query_params.get("hashtag")
+
+            if text:
+                queryset = queryset.filter(
+                    Q(title__icontains=text) | Q(text__icontains=text)
+                )
+            if hashtag:
+                queryset = queryset.filter(hashtags__icontains=hashtag)
+
+        return queryset.distinct()
+
+    def get_serializer_class(self):
+        if self.action == "list":
+            return PostListSerializer
+        if self.action == "add_comment":
+            return CommentSerializer
+        return PostSerializer
 
     def perform_create(self, serializer):
         user = self.request.user
         serializer.save(user=user)
+
+    @action(
+        detail=True,
+        methods=["POST"],
+        url_path="create_comment",
+    )
+    def add_comment(self, request, pk=None):
+        post = self.get_object()
+        serializer = CommentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(user=self.request.user, post=post)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class CommentViewSet(viewsets.ModelViewSet):
