@@ -94,11 +94,3 @@ class Like(models.Model):
         related_name="likes",
     )
     action = models.CharField(max_length=15, choices=ActionChoices.choices)
-
-    # @property
-    # def likes_count(self) -> int:
-    #     return self.objects.fillter(action=ActionChoices.LIKE).count()
-    #
-    # @property
-    # def dislikes_count(self) -> int:
-    #     return self.objects.fillter(action=ActionChoices.DISLIKE).count()
