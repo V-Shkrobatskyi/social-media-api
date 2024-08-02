@@ -183,13 +183,12 @@ class LikeSerializer(serializers.ModelSerializer):
         post = self.validated_data["post"]
         action = self.validated_data["action"]
         user = self.context["request"].user
-        like_instance = Like.objects.filter(
-            post=post,
-            user=user,
-            action=action,
-        )
 
-        if like_instance.exists():
-            like_instance(action=action).save()
-        else:
-            Like.objects.create(user=user, post=post, action=action)
+        like, created = Like.objects.get_or_create(
+            user=user, post=post, defaults={"action": action}
+        )
+        if not created:
+            like.action = action
+            like.save()
+
+        return like
