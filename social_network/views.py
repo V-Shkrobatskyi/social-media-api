@@ -129,6 +129,8 @@ class PostViewSet(viewsets.ModelViewSet):
             return PostListSerializer
         if self.action == "add_comment":
             return CommentSerializer
+        if self.action == "add_like_dislike":
+            return LikeSerializer
         return PostSerializer
 
     def perform_create(self, serializer):
@@ -138,13 +140,25 @@ class PostViewSet(viewsets.ModelViewSet):
     @action(
         detail=True,
         methods=["POST"],
-        url_path="create_comment",
+        url_path="add_comment",
     )
     def add_comment(self, request, pk=None):
         post = self.get_object()
         serializer = CommentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save(user=self.request.user, post=post)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(
+        detail=True,
+        methods=["POST"],
+        url_path="add_like_dislike",
+    )
+    def add_like_dislike(self, request, pk=None):
+        post = self.get_object()
+        serializer = LikeSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save(user=request.user, post=post)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
