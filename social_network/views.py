@@ -14,6 +14,7 @@ from social_network.serializers import (
     LikeSerializer,
     PostListSerializer,
     CommentCreateSerializer,
+    PostCreateSerializer,
 )
 
 
@@ -37,10 +38,22 @@ class ProfileViewSet(viewsets.ModelViewSet):
         if self.action == "retrieve":
             queryset = queryset.prefetch_related()
 
+        if self.action == "followers":
+            profile = self.request.user.profile
+            queryset = profile.followers.all().prefetch_related(
+                "followers", "following"
+            )
+
+        if self.action == "following":
+            profile = self.request.user.profile
+            queryset = profile.following.all().prefetch_related(
+                "followers", "following"
+            )
+
         return queryset.distinct()
 
     def get_serializer_class(self):
-        if self.action == "list":
+        if self.action in ("list", "followers", "following"):
             return ProfileListSerializer
         if self.action == "upload_image":
             return ProfileImageSerializer
@@ -87,6 +100,22 @@ class ProfileViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK,
         )
 
+    @action(
+        methods=["GET"],
+        detail=False,
+        url_path="followers",
+    )
+    def followers(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+    @action(
+        methods=["GET"],
+        detail=False,
+        url_path="following",
+    )
+    def following(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
 
 class PostViewSet(viewsets.ModelViewSet):
     queryset = (
@@ -106,11 +135,16 @@ class PostViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = self.queryset
 
-        if self.action == "list":
-            queryset = self.queryset.filter(
-                Q(user__profile__followers=self.request.user.profile)
-                | Q(user__profile=self.request.user.profile)
-            )
+        if self.action in ("list", "my_posts_list"):
+
+            if self.action == "list":
+                queryset = self.queryset.filter(
+                    Q(user__profile__followers=self.request.user.profile)
+                    | Q(user__profile=self.request.user.profile)
+                )
+
+            if self.action == "my_posts_list":
+                queryset = self.queryset.filter(user__profile=self.request.user.profile)
 
             text = self.request.query_params.get("text")
             hashtag = self.request.query_params.get("hashtag")
@@ -125,12 +159,14 @@ class PostViewSet(viewsets.ModelViewSet):
         return queryset.distinct()
 
     def get_serializer_class(self):
-        if self.action == "list":
+        if self.action in ("list", "my_posts_list"):
             return PostListSerializer
         if self.action == "add_comment":
             return CommentSerializer
         if self.action == "add_like_dislike":
             return LikeSerializer
+        if self.action == "create":
+            return PostCreateSerializer
         return PostSerializer
 
     def perform_create(self, serializer):
@@ -160,6 +196,14 @@ class PostViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save(user=request.user, post=post)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(
+        methods=["GET"],
+        detail=False,
+        url_path="my_posts_list",
+    )
+    def my_posts_list(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
 
 
 class CommentViewSet(viewsets.ModelViewSet):
