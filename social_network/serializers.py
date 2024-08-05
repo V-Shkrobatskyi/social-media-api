@@ -136,6 +136,19 @@ class PostSerializer(serializers.ModelSerializer):
             "likes_count",
             "dislikes_count",
         )
+        read_only_fields = ("id", "comments", "likes_count", "dislikes_count")
+
+
+class PostCreateSerializer(PostSerializer):
+    class Meta:
+        model = Post
+        fields = (
+            "id",
+            "title",
+            "image",
+            "text",
+            "hashtags",
+        )
 
 
 class PostListSerializer(serializers.ModelSerializer):
