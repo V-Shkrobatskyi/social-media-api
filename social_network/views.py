@@ -66,12 +66,18 @@ class ProfileViewSet(viewsets.ModelViewSet):
         serializer.save(user=self.request.user)
 
     @action(
-        methods=["GET", "POST"],
+        methods=["POST", "GET"],
         detail=True,
         url_path="upload-image",
     )
     def upload_image(self, request, pk=None):
         profile = self.get_object()
+        if self.request.user.profile != profile:
+            return Response(
+                {"detail": f"You can upload image only to your profile."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         serializer = self.get_serializer(profile, data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()

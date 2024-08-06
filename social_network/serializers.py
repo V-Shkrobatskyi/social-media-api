@@ -84,19 +84,6 @@ class ProfileImageSerializer(serializers.ModelSerializer):
         model = Profile
         fields = ("id", "image")
 
-    def validate(self, attrs):
-        data = super(ProfileImageSerializer, self).validate(attrs=attrs)
-
-        user = self.context["request"].user
-        profile_user = Profile.objects.filter(user=user).first()
-
-        if profile_user != user:
-            raise ValidationError(
-                {"error": "You can upload image only to your profile."}
-            )
-
-        return data
-
 
 class CommentSerializer(serializers.ModelSerializer):
     class Meta:
