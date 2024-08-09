@@ -98,6 +98,8 @@ class CommentCreateSerializer(CommentSerializer):
 
 
 class CommentDetailSerializer(CommentSerializer):
+    user = serializers.CharField(read_only=True, source="user.profile.full_name")
+
     class Meta:
         model = Comment
         fields = ("id", "user", "text", "created")
