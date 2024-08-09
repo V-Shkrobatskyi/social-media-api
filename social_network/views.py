@@ -141,7 +141,7 @@ class PostViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = self.queryset
 
-        if self.action in ("list", "my_posts_list"):
+        if self.action in ("list", "my_posts_list", "liked_posts_list"):
 
             if self.action == "list":
                 queryset = self.queryset.filter(
@@ -151,6 +151,11 @@ class PostViewSet(viewsets.ModelViewSet):
 
             if self.action == "my_posts_list":
                 queryset = self.queryset.filter(user__profile=self.request.user.profile)
+
+            if self.action == "liked_posts_list":
+                queryset = self.queryset.filter(
+                    likes__user=self.request.user, likes__action="like"
+                )
 
             text = self.request.query_params.get("text")
             hashtag = self.request.query_params.get("hashtag")
@@ -165,7 +170,7 @@ class PostViewSet(viewsets.ModelViewSet):
         return queryset.distinct()
 
     def get_serializer_class(self):
-        if self.action in ("list", "my_posts_list"):
+        if self.action in ("list", "my_posts_list", "liked_posts_list"):
             return PostListSerializer
         if self.action == "add_comment":
             return CommentSerializer
@@ -209,6 +214,14 @@ class PostViewSet(viewsets.ModelViewSet):
         url_path="my_posts_list",
     )
     def my_posts_list(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+    @action(
+        methods=["GET"],
+        detail=False,
+        url_path="liked_posts_list",
+    )
+    def liked_posts_list(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
 
 
