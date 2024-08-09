@@ -106,8 +106,8 @@ class CommentDetailSerializer(CommentSerializer):
 class PostSerializer(serializers.ModelSerializer):
     user = serializers.CharField(read_only=True, source="user.profile.full_name")
     comments = CommentDetailSerializer(many=True, read_only=True)
-    likes_count = serializers.IntegerField()
-    dislikes_count = serializers.IntegerField()
+    likes_count = serializers.IntegerField(read_only=True)
+    dislikes_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Post
@@ -123,7 +123,7 @@ class PostSerializer(serializers.ModelSerializer):
             "likes_count",
             "dislikes_count",
         )
-        read_only_fields = ("id", "comments", "likes_count", "dislikes_count")
+        read_only_fields = ("id", "comments")
 
 
 class PostCreateSerializer(PostSerializer):
