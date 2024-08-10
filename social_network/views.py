@@ -13,7 +13,6 @@ from social_network.serializers import (
     ProfileListSerializer,
     LikeSerializer,
     PostListSerializer,
-    CommentCreateSerializer,
     PostCreateSerializer,
 )
 
