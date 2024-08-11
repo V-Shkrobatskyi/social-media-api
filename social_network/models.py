@@ -23,8 +23,6 @@ class Profile(models.Model):
         on_delete=models.CASCADE,
         related_name="profile",
     )
-    first_name = models.CharField(max_length=255, blank=True)
-    last_name = models.CharField(max_length=255, blank=True)
     image = models.ImageField(null=True, upload_to=image_file_path)
     birth_date = models.DateField(null=True, blank=True)
     gender = models.CharField(max_length=15, choices=GenderChoices.choices)
@@ -36,10 +34,10 @@ class Profile(models.Model):
 
     @property
     def full_name(self) -> str:
-        return f"{self.first_name} {self.last_name}"
+        return str(self.user.full_name)
 
-    def __str__(self) -> str:
-        return f"{self.full_name}"
+    def __str__(self):
+        return str(self.user.full_name)
 
 
 class Post(models.Model):
