@@ -2,9 +2,11 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from social_network.models import Profile, Comment, Like, Post
+from user.serializers import UserUpdateProfileSerializer
 
 
 class ProfileSerializer(serializers.ModelSerializer):
+    user = UserUpdateProfileSerializer(many=False, partial=True)
     following = serializers.SerializerMethodField()
     followers = serializers.SerializerMethodField()
 
@@ -19,8 +21,6 @@ class ProfileSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "user",
-            "first_name",
-            "last_name",
             "image",
             "birth_date",
             "gender",
@@ -37,26 +37,26 @@ class ProfileSerializer(serializers.ModelSerializer):
         user = self.context["request"].user
         profile_exist = Profile.objects.filter(user=user).first()
         if profile_exist and self.instance != profile_exist:
-            raise ValidationError(
-                {
-                    "error": "You already have your own profile. You can change only your profile."
-                }
-            )
+            raise ValidationError({"error": "You already have your own profile."})
 
         return data
 
-    def create(self, validated_data):
-        profile = Profile.objects.create(**validated_data)
-        return profile
-
     def update(self, instance, validated_data):
-        fields_to_update = ["last_name", "bio", "phone_number"]
+        fields_to_update = ["gender", "bio", "phone_number"]
 
         for field in fields_to_update:
             value = validated_data.get(field, getattr(instance, field))
             setattr(instance, field, value)
 
         instance.save()
+
+        user = instance.user
+        user_data = self.validated_data.get("user")
+        user.first_name = user_data["first_name"]
+        user.last_name = user_data["last_name"]
+
+        user.save()
+
         return instance
 
 
@@ -68,8 +68,7 @@ class ProfileListSerializer(serializers.ModelSerializer):
         model = Profile
         fields = (
             "id",
-            "first_name",
-            "last_name",
+            "full_name",
             "birth_date",
             "gender",
             "bio",
@@ -86,28 +85,31 @@ class ProfileImageSerializer(serializers.ModelSerializer):
 
 
 class CommentSerializer(serializers.ModelSerializer):
+    user = serializers.CharField(read_only=True, source="user.full_name")
+    post = serializers.CharField(read_only=True, source="post.title")
+
     class Meta:
         model = Comment
-        fields = ("id", "text", "created")
+        fields = ("id", "post", "user", "text", "created")
 
 
 class CommentCreateSerializer(CommentSerializer):
     class Meta:
         model = Comment
-        fields = ("id", "post", "text", "created")
+        fields = ("text",)
 
 
-class CommentDetailSerializer(CommentSerializer):
-    user = serializers.CharField(read_only=True, source="user.profile.full_name")
+class CommentDetailForPostSerializer(CommentSerializer):
+    user = serializers.CharField(read_only=True, source="user.full_name")
 
     class Meta:
         model = Comment
-        fields = ("id", "user", "text", "created")
+        fields = ("user", "text", "created")
 
 
 class PostSerializer(serializers.ModelSerializer):
-    user = serializers.CharField(read_only=True, source="user.profile.full_name")
-    comments = CommentDetailSerializer(many=True, read_only=True)
+    user = serializers.CharField(read_only=True, source="user.full_name")
+    comments = CommentDetailForPostSerializer(many=True, read_only=True)
     likes_count = serializers.IntegerField(read_only=True)
     dislikes_count = serializers.IntegerField(read_only=True)
 
@@ -141,6 +143,7 @@ class PostCreateSerializer(PostSerializer):
 
 
 class PostListSerializer(serializers.ModelSerializer):
+    user = serializers.CharField(read_only=True, source="user.full_name")
     likes_count = serializers.IntegerField()
     dislikes_count = serializers.IntegerField()
 
@@ -160,17 +163,21 @@ class PostListSerializer(serializers.ModelSerializer):
         )
 
 
-class LikeSerializer(serializers.ModelSerializer):
+class LikeCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Like
-        fields = ("id", "post", "action", "user")
-        read_only_fields = ("id", "user")
+        fields = ("action",)
 
     def validate(self, attrs):
-        data = super(LikeSerializer, self).validate(attrs)
-        post = attrs["post"]
+        data = super(LikeCreateSerializer, self).validate(attrs)
+        post = self.context["post"]
         action = attrs["action"]
         user = self.context["request"].user
+
+        if not post:
+            raise serializers.ValidationError(
+                f"You can add {action} action only to posts."
+            )
 
         if Like.objects.filter(
             post=post,
@@ -182,7 +189,7 @@ class LikeSerializer(serializers.ModelSerializer):
         return data
 
     def save(self, *args, **kwargs):
-        post = self.validated_data["post"]
+        post = self.context["post"]
         action = self.validated_data["action"]
         user = self.context["request"].user
 
@@ -194,3 +201,12 @@ class LikeSerializer(serializers.ModelSerializer):
             like.save()
 
         return like
+
+
+class LikeSerializer(serializers.ModelSerializer):
+    user = serializers.CharField(source="user.full_name")
+    post = serializers.CharField(source="post.title")
+
+    class Meta:
+        model = Like
+        fields = ("id", "post", "action", "user")
