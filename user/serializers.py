@@ -31,6 +31,18 @@ class UserSerializer(serializers.ModelSerializer):
         return user
 
 
+class UserUpdateProfileSerializer(UserSerializer):
+    first_name = serializers.CharField(required=True)
+    last_name = serializers.CharField(required=True)
+
+    class Meta:
+        model = get_user_model()
+        fields = (
+            "first_name",
+            "last_name",
+        )
+
+
 class AuthTokenSerializer(serializers.Serializer):
     email = serializers.CharField(label=_("Email"), write_only=True)
     password = serializers.CharField(
