@@ -1,25 +1,33 @@
 from django.db.models import Count, Q
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
-from rest_framework.generics import get_object_or_404
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from social_network.models import Profile, Post, Comment, Like
+from social_network.permissions import IsOwnerOrIfAuthenticatedReadOnly
 from social_network.serializers import (
     ProfileSerializer,
     CommentSerializer,
     PostSerializer,
     ProfileImageSerializer,
     ProfileListSerializer,
-    LikeSerializer,
     PostListSerializer,
     PostCreateSerializer,
+    CommentCreateSerializer,
+    LikeSerializer,
+    LikeCreateSerializer,
 )
 
 
 class ProfileViewSet(viewsets.ModelViewSet):
-    queryset = Profile.objects.all().prefetch_related("followers", "following")
+    queryset = (
+        Profile.objects.all()
+        .select_related("user")
+        .prefetch_related("followers", "following")
+    )
     serializer_class = ProfileSerializer
+    permission_classes = (IsAuthenticated, IsOwnerOrIfAuthenticatedReadOnly)
 
     def get_queryset(self):
         first_name = self.request.query_params.get("first_name")
@@ -28,25 +36,32 @@ class ProfileViewSet(viewsets.ModelViewSet):
         queryset = self.queryset
 
         if first_name:
-            queryset = queryset.filter(first_name__icontains=first_name)
+            queryset = queryset.filter(user__first_name__icontains=first_name)
         if last_name:
-            queryset = queryset.filter(last_name__icontains=last_name)
+            queryset = queryset.filter(user__last_name__icontains=last_name)
         if birth_date:
             queryset = queryset.filter(birth_date=birth_date)
 
-        if self.action == "retrieve":
-            queryset = queryset.prefetch_related()
-
         if self.action == "followers":
             profile = self.request.user.profile
-            queryset = profile.followers.all().prefetch_related(
-                "followers", "following"
+            queryset = (
+                profile.followers.all()
+                .select_related("user")
+                .prefetch_related("followers", "following")
             )
 
         if self.action == "following":
             profile = self.request.user.profile
-            queryset = profile.following.all().prefetch_related(
-                "followers", "following"
+            queryset = (
+                profile.following.all()
+                .select_related("user")
+                .prefetch_related("followers", "following")
+            )
+
+        if self.action == "retrieve":
+            queryset = queryset.prefetch_related(
+                "followers__user",
+                "following__user",
             )
 
         return queryset.distinct()
@@ -68,15 +83,10 @@ class ProfileViewSet(viewsets.ModelViewSet):
         methods=["POST", "GET"],
         detail=True,
         url_path="upload-image",
+        permission_classes=[IsOwnerOrIfAuthenticatedReadOnly],
     )
     def upload_image(self, request, pk=None):
         profile = self.get_object()
-        if self.request.user.profile != profile:
-            return Response(
-                {"detail": f"You can upload image only to your profile."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
         serializer = self.get_serializer(profile, data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
@@ -128,7 +138,7 @@ class PostViewSet(viewsets.ModelViewSet):
         .select_related("user")
         .prefetch_related(
             "likes",
-            "comments",
+            "comments__user",
         )
         .annotate(
             likes_count=Count("likes", filter=Q(likes__action="like")),
@@ -136,6 +146,7 @@ class PostViewSet(viewsets.ModelViewSet):
         )
     ).order_by("-created")
     serializer_class = PostSerializer
+    permission_classes = (IsAuthenticated, IsOwnerOrIfAuthenticatedReadOnly)
 
     def get_queryset(self):
         queryset = self.queryset
@@ -187,10 +198,11 @@ class PostViewSet(viewsets.ModelViewSet):
         detail=True,
         methods=["POST"],
         url_path="add_comment",
+        permission_classes=[IsAuthenticated],
     )
     def add_comment(self, request, pk=None):
         post = self.get_object()
-        serializer = CommentSerializer(data=request.data)
+        serializer = CommentCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save(user=self.request.user, post=post)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -199,10 +211,13 @@ class PostViewSet(viewsets.ModelViewSet):
         detail=True,
         methods=["POST"],
         url_path="add_like_dislike",
+        permission_classes=[IsAuthenticated],
     )
     def add_like_dislike(self, request, pk=None):
         post = self.get_object()
-        serializer = LikeSerializer(data=request.data, context={"request": request})
+        serializer = LikeCreateSerializer(
+            data=request.data, context={"request": request, "post": post}
+        )
         serializer.is_valid(raise_exception=True)
         serializer.save(user=request.user, post=post)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -224,21 +239,13 @@ class PostViewSet(viewsets.ModelViewSet):
         return self.list(request, *args, **kwargs)
 
 
-class CommentViewSet(viewsets.ModelViewSet):
-    queryset = Comment.objects.all()
+class CommentViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Comment.objects.all().select_related("user", "post")
     serializer_class = CommentSerializer
+    permission_classes = (IsAuthenticated, IsOwnerOrIfAuthenticatedReadOnly)
 
 
-class LikeViewSet(viewsets.ModelViewSet):
+class LikeViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Like.objects.all().select_related("user", "post")
     serializer_class = LikeSerializer
-
-    def perform_create(self, serializer):
-        post = get_object_or_404(Post, pk=self.request.data["post"])
-        user = self.request.user
-
-        likes = Like.objects.filter(user=user, post=post)
-        if likes:
-            likes.delete()
-        else:
-            serializer.save(user=user, post=post)
+    permission_classes = (IsAuthenticated, IsOwnerOrIfAuthenticatedReadOnly)
