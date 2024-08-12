@@ -1,4 +1,6 @@
 from django.db.models import Count, Q
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -131,6 +133,31 @@ class ProfileViewSet(viewsets.ModelViewSet):
     def following(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "first_name",
+                type=OpenApiTypes.STR,
+                description="Filter by first_name (ex. ?first_name=a)",
+                required=False,
+            ),
+            OpenApiParameter(
+                "last_name",
+                type=OpenApiTypes.STR,
+                description="Filter by last_name (ex. ?last_name=a)",
+                required=False,
+            ),
+            OpenApiParameter(
+                name="birth_date",
+                type=OpenApiTypes.DATE,
+                description="Filter by birth_date " "(ex. ?birth_date=2014-08-21)",
+                required=False,
+            ),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
 
 class PostViewSet(viewsets.ModelViewSet):
     queryset = (
@@ -237,6 +264,25 @@ class PostViewSet(viewsets.ModelViewSet):
     )
     def liked_posts_list(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "text",
+                type=OpenApiTypes.STR,
+                description="Filter by post title and text (ex. ?text=a)",
+                required=False,
+            ),
+            OpenApiParameter(
+                "hashtag",
+                type=OpenApiTypes.STR,
+                description="Filter by hashtag (ex. ?hashtag=a)",
+                required=False,
+            ),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
 
 class CommentViewSet(viewsets.ReadOnlyModelViewSet):
