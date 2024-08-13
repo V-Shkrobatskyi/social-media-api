@@ -232,7 +232,7 @@ class PostViewSet(viewsets.ModelViewSet):
         post = self.get_object()
         serializer = CommentCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(user=self.request.user, post=post)
+        serializer.save(user=request.user, post=post)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @action(

@@ -163,7 +163,16 @@ class PostListSerializer(serializers.ModelSerializer):
         )
 
 
-class LikeCreateSerializer(serializers.ModelSerializer):
+class LikeSerializer(serializers.ModelSerializer):
+    user = serializers.CharField(read_only=True, source="user.full_name")
+    post = serializers.CharField(read_only=True, source="post.title")
+
+    class Meta:
+        model = Like
+        fields = ("id", "post", "action", "user")
+
+
+class LikeCreateSerializer(LikeSerializer):
     class Meta:
         model = Like
         fields = ("action",)
@@ -173,11 +182,6 @@ class LikeCreateSerializer(serializers.ModelSerializer):
         post = self.context["post"]
         action = attrs["action"]
         user = self.context["request"].user
-
-        if not post:
-            raise serializers.ValidationError(
-                f"You can add {action} action only to posts."
-            )
 
         if Like.objects.filter(
             post=post,
@@ -201,12 +205,3 @@ class LikeCreateSerializer(serializers.ModelSerializer):
             like.save()
 
         return like
-
-
-class LikeSerializer(serializers.ModelSerializer):
-    user = serializers.CharField(source="user.full_name")
-    post = serializers.CharField(source="post.title")
-
-    class Meta:
-        model = Like
-        fields = ("id", "post", "action", "user")
