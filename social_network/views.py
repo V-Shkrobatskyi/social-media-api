@@ -76,10 +76,11 @@ class ProfileViewSet(viewsets.ModelViewSet):
         return ProfileSerializer
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
-    def perform_update(self, serializer):
-        serializer.save(user=self.request.user)
+        user = self.request.user
+        user.first_name = self.request.data.get("user.first_name")
+        user.last_name = self.request.data.get("user.last_name")
+        user.save()
+        serializer.save(user=user)
 
     @action(
         methods=["POST", "GET"],
