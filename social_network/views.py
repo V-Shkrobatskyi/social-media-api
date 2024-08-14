@@ -19,6 +19,7 @@ from social_network.serializers import (
     CommentCreateSerializer,
     LikeSerializer,
     LikeCreateSerializer,
+    PostRetrieveSerializer,
 )
 
 
@@ -216,9 +217,15 @@ class PostViewSet(viewsets.ModelViewSet):
             return LikeSerializer
         if self.action == "create":
             return PostCreateSerializer
+        if self.action == "retrieve":
+            return PostRetrieveSerializer
         return PostSerializer
 
     def perform_create(self, serializer):
+        user = self.request.user
+        serializer.save(user=user)
+
+    def perform_update(self, serializer):
         user = self.request.user
         serializer.save(user=user)
 

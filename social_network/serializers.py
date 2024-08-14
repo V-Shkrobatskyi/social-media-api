@@ -142,6 +142,39 @@ class PostCreateSerializer(PostSerializer):
         )
 
 
+class PostRetrieveSerializer(PostSerializer):
+    user = serializers.CharField(read_only=True, source="user.full_name")
+    comments = CommentDetailForPostSerializer(many=True, read_only=True)
+    likes_count = serializers.IntegerField(read_only=True)
+    dislikes_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Post
+        fields = (
+            "id",
+            "title",
+            "image",
+            "text",
+            "hashtags",
+            "user",
+            "created",
+            "updated",
+            "comments",
+            "likes_count",
+            "dislikes_count",
+        )
+
+    read_only_fields = (
+        "id",
+        "user",
+        "created",
+        "updated",
+        "comments",
+        "likes_count",
+        "dislikes_count",
+    )
+
+
 class PostListSerializer(serializers.ModelSerializer):
     user = serializers.CharField(read_only=True, source="user.full_name")
     likes_count = serializers.IntegerField()
