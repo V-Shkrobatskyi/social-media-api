@@ -16,8 +16,11 @@ packaging==24.1
 pathspec==0.12.1
 pillow==10.4.0
 platformdirs==4.2.2
+psycopg==3.2.1
+psycopg2==2.9.9
 psycopg2-binary==2.9.9
 PyJWT==2.8.0
+python-dotenv==1.0.1
 PyYAML==6.0.2
 referencing==0.35.1
 rpds-py==0.20.0
