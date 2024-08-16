@@ -109,13 +109,13 @@ class ProfileViewSet(viewsets.ModelViewSet):
         if profile in self.request.user.profile.following.all():
             self.request.user.profile.following.remove(profile)
             return Response(
-                {"detail": f"Now you are now unfollowing user {profile}."},
+                {"detail": f"Now you are unfollowing user {profile}."},
                 status=status.HTTP_200_OK,
             )
 
         self.request.user.profile.following.add(profile)
         return Response(
-            {"detail": f"Now you are now following user {profile}."},
+            {"detail": f"Now you are following user {profile}."},
             status=status.HTTP_200_OK,
         )
 
