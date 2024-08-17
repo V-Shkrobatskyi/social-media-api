@@ -197,14 +197,14 @@ class PostViewSet(viewsets.ModelViewSet):
                 )
 
             text = self.request.query_params.get("text")
-            hashtag = self.request.query_params.get("hashtag")
+            hashtags = self.request.query_params.get("hashtags")
 
             if text:
                 queryset = queryset.filter(
                     Q(title__icontains=text) | Q(text__icontains=text)
                 )
-            if hashtag:
-                queryset = queryset.filter(hashtags__icontains=hashtag)
+            if hashtags:
+                queryset = queryset.filter(hashtags__icontains=hashtags)
 
         return queryset.distinct()
 
