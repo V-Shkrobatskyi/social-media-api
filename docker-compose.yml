@@ -1,0 +1,30 @@
+services:
+  app:
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/social-media-api
+      - media_vol:/files/media
+    command: >
+      sh -c "python manage.py wait_for_db &&
+            python manage.py migrate &&
+            python manage.py runserver 0.0.0.0:8000"
+    env_file:
+      - .env
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16.3-alpine3.20
+    ports:
+      - "5433:5432"
+    env_file:
+      - .env
+    volumes:
+      - db_vol:$PGDATA
+
+volumes:
+  db_vol:
+  media_vol:
