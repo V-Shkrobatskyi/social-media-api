@@ -1,0 +1,11 @@
+# created by virtualenv automatically
+*.iml
+.env
+.DS_Store
+.venv
+.pytest_cache
+**__pycache__
+**db.sqlite3
+media
+.idea
+uploads
